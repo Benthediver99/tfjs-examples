@@ -2,9 +2,8 @@ import React, { useEffect, useState, useRef } from 'react';
 import { StyleSheet, Text, View, Dimensions, Platform } from 'react-native';
 
 import { Camera } from 'expo-camera';
-
 import * as tf from '@tensorflow/tfjs';
-import * as posedetection from '@tensorflow-models/pose-detection';
+import * as poseDetection from '@tensorflow-models/pose-detection';
 import * as ScreenOrientation from 'expo-screen-orientation';
 import { cameraWithTensors } from '@tensorflow/tfjs-react-native';
 import Svg, { Circle } from 'react-native-svg';
@@ -43,8 +42,8 @@ const AUTO_RENDER = false;
 export default function App() {
   const cameraRef = useRef(null);
   const [tfReady, setTfReady] = useState(false);
-  const [model, setModel] = useState<posedetection.PoseDetector>();
-  const [poses, setPoses] = useState<posedetection.Pose[]>();
+  const [model, setModel] = useState<poseDetection.PoseDetector>();
+  const [poses, setPoses] = useState<poseDetection.Pose[]>();
   const [fps, setFps] = useState(0);
   const [orientation, setOrientation] =
     useState<ScreenOrientation.Orientation>();
@@ -66,16 +65,16 @@ export default function App() {
       // Wait for tfjs to initialize the backend.
       await tf.ready();
 
-      // Load movenet model.
+      // Load Blazepose model.
       // https://github.com/tensorflow/tfjs-models/tree/master/pose-detection
-      const model = await posedetection.createDetector(
-        posedetection.SupportedModels.MoveNet,
-        {
-          modelType: posedetection.movenet.modelType.SINGLEPOSE_LIGHTNING,
-          enableSmoothing: true,
-        }
-      );
-      setModel(model);
+      const model = await poseDetection.SupportedModels.BlazePose;
+      const detectorConfig = {
+        runtime: 'tfjs',
+        enableSmoothing: true,
+        modelType: 'full'
+      };
+      detector = await poseDetection.createDetector(model, detectorConfig);
+      // setModel(model);
 
       // Ready!
       setTfReady(true);
@@ -91,18 +90,15 @@ export default function App() {
   ) => {
     const loop = async () => {
       // Get the tensor and run pose detection.
-      const imageTensor = images.next().value as tf.Tensor3D;
-
+      const image = images.next().value as tf.Tensor3D;
+      const estimationConfig = {flipHorizontal: true};
+      const timestamp = performance.now();
       const startTs = Date.now();
-      const poses = await model!.estimatePoses(
-        imageTensor,
-        undefined,
-        Date.now()
-      );
+      const poses = await detector.estimatePoses(image, estimationConfig, timestamp);
       const latency = Date.now() - startTs;
       setFps(Math.floor(1000 / latency));
       setPoses(poses);
-      tf.dispose([imageTensor]);
+      tf.dispose([image]);
 
       // Render camera preview manually when autorender=false.
       if (!AUTO_RENDER) {
