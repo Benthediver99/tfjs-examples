@@ -42,11 +42,11 @@ const AUTO_RENDER = false;
 export default function App() {
   const cameraRef = useRef(null);
   const [tfReady, setTfReady] = useState(false);
-  const [detector, setDetector] = useState<poseDetection.PoseDetector>();
-  const [poses, setPoses] = useState<poseDetection.Pose[]>();
+  const [detector, setDetector] = useState(null);
+  const [poses, setPoses] = useState(null);
   const [fps, setFps] = useState(0);
   const [orientation, setOrientation] =
-    useState<ScreenOrientation.Orientation>();
+    useState(ScreenOrientation.Orientation);
 
   useEffect(() => {
     async function prepare() {
@@ -85,16 +85,16 @@ export default function App() {
   }, []);
 
   const handleCameraStream = async (
-    images: IterableIterator<tf.Tensor3D>,
-    updatePreview: () => void,
-    gl: ExpoWebGLRenderingContext
+    images,
+    updatePreview,
+    gl
   ) => {
     const loop = async () => {
       // Get the tensor and run pose detection.
-      const image = images.next().value as tf.Tensor3D;
+      const image = images.next().value;
       const estimationConfig = {flipHorizontal: true};
       const timestamp = performance.now();
-      const poses = await detector!.estimatePoses(image, estimationConfig, timestamp);
+      const poses = await detector.estimatePoses(image, estimationConfig, timestamp);
       const latency = performance.now() - timestamp;
       setFps(Math.floor(1000 / latency));
       setPoses(poses);
