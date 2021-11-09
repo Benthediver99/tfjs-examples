@@ -42,7 +42,7 @@ const AUTO_RENDER = false;
 export default function App() {
   const cameraRef = useRef(null);
   const [tfReady, setTfReady] = useState(false);
-  const [model, setModel] = useState<poseDetection.PoseDetector>();
+  const [detector, setDetector] = useState<poseDetection.PoseDetector>();
   const [poses, setPoses] = useState<poseDetection.Pose[]>();
   const [fps, setFps] = useState(0);
   const [orientation, setOrientation] =
@@ -67,14 +67,15 @@ export default function App() {
 
       // Load Blazepose model.
       // https://github.com/tensorflow/tfjs-models/tree/master/pose-detection
-      const model = await poseDetection.SupportedModels.BlazePose;
-      const detectorConfig = {
-        runtime: 'tfjs',
-        enableSmoothing: true,
-        modelType: 'full'
-      };
-      detector = await poseDetection.createDetector(model, detectorConfig);
-      // setModel(model);
+      const detector = await poseDetection.createDetector(
+        poseDetection.SupportedModels.BlazePose,
+        {
+          modelType: 'full',
+          enableSmoothing: true,
+          runtime: 'tfjs'
+        }
+      );
+      setDetector(detector);
 
       // Ready!
       setTfReady(true);
@@ -93,9 +94,8 @@ export default function App() {
       const image = images.next().value as tf.Tensor3D;
       const estimationConfig = {flipHorizontal: true};
       const timestamp = performance.now();
-      const startTs = Date.now();
-      const poses = await detector.estimatePoses(image, estimationConfig, timestamp);
-      const latency = Date.now() - startTs;
+      const poses = await detector!.estimatePoses(image, estimationConfig, timestamp);
+      const latency = performance.now() - timestamp;
       setFps(Math.floor(1000 / latency));
       setPoses(poses);
       tf.dispose([image]);
